@@ -6,24 +6,24 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta, timezone
 
 # Database Configuration
-MONGO_URI = 'mongodb+srv://Magic:Spike@cluster0.fa68l.mongodb.net/TEST?retryWrites=true&w=majority&appName=Cluster0'
+MONGO_URI = 'mongodb+srv://surajgod112:surajgod113@cluster0.v52wo.mongodb.net/'
 client = MongoClient(MONGO_URI)
 db = client['TEST']
 users_collection = db['PAID']
 
 # Bot Configuration
-TELEGRAM_BOT_TOKEN = '7542386978:AAE6sDxkQqMozKslX-tW9gcYZlbXTvSAYkU'
-ADMIN_USER_ID = 7209762563 # Replace with your admin user ID
-ADMIN_USERNAME = 'KaliaYtOwner'  # Replace with your admin's Telegram username (without @)
+TELEGRAM_BOT_TOKEN = '7152947678:AAFKqMJHj_lKvwAAQxqx1WvSOU1KQRAEwU0'
+ADMIN_USER_ID = 6087651372 # Replace with your admin user ID
+ADMIN_USERNAME = 'hard_dubber_owner'  # Replace with your admin's Telegram username (without @)
 
 # Customizable messages
-OWNER_NAME = '@KaliaYtOwner'  # Change this to the owner's name
+OWNER_NAME = '@hard_dubber_owner'  # Change this to the owner's name
 WELCOME_MESSAGE = (
     f"🤗 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐓𝐇𝐄 𝐀𝐓𝐓𝐀𝐂𝐊 𝐁𝐎𝐓⚡\n\n"
     f"𝐎𝐖𝐍𝐄𝐑 💯 {OWNER_NAME} 🔥\n\n"
     "🌏 𝐖𝐄'𝐑𝐄 𝐏𝐑𝐎𝐕𝐈𝐃𝐈𝐍𝐆 𝐀𝐑𝐄 𝐖𝐎𝐑𝐋𝐃 𝐁𝐄𝐒𝐓 𝐇𝐀𝐂𝐊𝐒 🌏\n"
-    f"𝗣𝗔𝗜𝗗 𝗗𝗗𝗢𝗦 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗘 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 - @KaliaYtOwner ⭐\n"
-    f"𝘿𝙊𝙉'𝙏 𝙁𝙊𝙍𝙂𝙊𝙏 𝙏𝙊 𝙅𝙊𝙄𝙉 𝙊𝙐𝙍 𝘾𝙃𝘼𝙉𝙉𝙀𝙇 💦 @KaliaYtOwner\n"
+    f"𝗣𝗔𝗜𝗗 𝗗𝗗𝗢𝗦 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗘 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 - @hard_dubber_owner ⭐\n"
+    f"𝘿𝙊𝙉'𝙏 𝙁𝙊𝙍𝙂𝙊𝙏 𝙏𝙊 𝙅𝙊𝙄𝙉 𝙊𝙐𝙍 𝘾𝙃𝘼𝙉𝙉𝙀𝙇 💦 @HardDubber\n"
 )
 
 active_attacks = {}  # To keep track of active attacks (user_id -> attack process)
@@ -60,7 +60,7 @@ async def add_user(update: Update, context: CallbackContext):
     if user_id != ADMIN_USER_ID:
         await context.bot.send_message(
             chat_id=update.effective_chat.id, 
-            text="*💀 𝗔𝗕𝗘 𝗢𝗪𝗡𝗘𝗥 𝗛𝗜 𝗔𝗗𝗗 𝗞𝗔𝗥 𝗦𝗔𝗞𝗧𝗔 𝗛𝗔𝗜🤬 ⚡ 𝙆𝙃𝙐𝘿 𝙆𝘼 𝘽𝙊𝙏 𝘽𝘼𝙉𝘼 𝙉𝘼𝙃𝙄 𝙏𝙊𝙃 𝘽𝙃𝘼𝙂 𝙅𝘼 🇧 🇺 🇾 ~ @KaliaYtOwner 𝙋𝙍𝙄𝘾𝙀 - 200000000 𝘼𝘽 𝙉𝙄𝙆𝘼𝙇",
+            text="*💀 𝗔𝗕𝗘 𝗢𝗪𝗡𝗘𝗥 𝗛𝗜 𝗔𝗗𝗗 𝗞𝗔𝗥 𝗦𝗔𝗞𝗧𝗔 𝗛𝗔𝗜🤬 ⚡ 𝙆𝙃𝙐𝘿 𝙆𝘼 𝘽𝙊𝙏 𝘽𝘼𝙉𝘼 𝙉𝘼𝙃𝙄 𝙏𝙊𝙃 𝘽𝙃𝘼𝙂 𝙅𝘼 🇧 🇺 🇾 ~ @hard_dubber_owner 𝙋𝙍𝙄𝘾𝙀 - 200000000 𝘼𝘽 𝙉𝙄𝙆𝘼𝙇",
             parse_mode='Markdown'
         )
         return
